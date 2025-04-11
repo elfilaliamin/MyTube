@@ -1,0 +1,219 @@
+body {
+    font-family: 'Oswald', sans-serif;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden; /* Prevent body scrolling */
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    background-color: #0F0F0F;
+    color: white;
+    position: sticky;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    z-index: 100;
+}
+
+header a{
+    text-decoration: none;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+header p {
+    font-size: 24px;
+}
+
+#addvideo-btn {
+    padding: 14px 16px;
+    border-radius: 50px;
+    border: 1px solid #00953B;
+    color: white;
+    background-color: #00953B;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+}
+
+#addvideo-btn:hover {
+    background-color: white;
+    color: #00953B;
+}
+
+#content {
+    flex: 1;
+    overflow-y: auto; /* Enables vertical scroll */
+    padding: 40px 20px 20px; /* Added padding to account for the fixed header */
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Makes the content responsive */
+    gap: 30px;
+    box-sizing: border-box;
+    max-height: calc(100vh - 60px); /* Ensures content doesn't overflow beyond the available space */
+}
+
+#content img {
+    width: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    aspect-ratio: 16/9;
+}
+
+#content p {
+    font-size: 1.2rem;
+    margin: 0;
+    padding: 10px 5px 0 5px;
+    margin-bottom: auto; /* Pushes buttons to the bottom */
+    overflow: hidden;
+    text-overflow: ellipsis; /* Ensures long titles don't break the layout */
+}
+
+.video {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    padding: 0;
+    height: 300px; /* Set a fixed height for each video card */
+    display: flex;
+    flex-direction: column;
+}
+
+#overlay {
+    visibility: hidden;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.514); /* dark transparent */
+    z-index: 50;
+}
+
+.buttons {
+    display: flex;
+    gap: 20px;
+    padding: 15px 5px;
+}
+
+.buttons button {
+    border: none;
+    padding: 7px 0;
+    flex: 1;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#watch-btn {
+    background-color: #0D5AB4;
+    border: #0D5AB4 solid 1px;
+}
+
+#watch-btn:hover {
+    background-color: white;
+    color: #0D5AB4;
+}
+
+#delete-btn {
+    background-color: #FBBC05;
+    border: #FBBC05 solid 1px;
+    color: black;
+}
+
+#delete-btn:hover {
+    background-color: white;
+    color: #FBBC05;
+}
+
+.addvideo-popup{
+    visibility: hidden;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center the popup */
+    z-index: 999;
+    background-color: white;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    border-radius: 7px;
+}
+
+.addvideo-popup p{
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+.addvideo-popup input{
+    border: 1px solid grey;
+    padding: 10px 20px;
+    font-size: 1rem;
+    min-width: 300px;
+    border-radius: 5px;
+}
+
+.addvideo-popup-buttons{
+    display: flex;
+    width: 100%;
+    gap: 15px;
+}
+
+.addvideo-popup-buttons button{
+    border: none;
+    padding: 10px 0;
+    flex: 1;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#add-btn {
+    background-color: #00953B;
+    border: #00953B solid 1px;
+}
+
+#add-btn:hover {
+    background-color: white;
+    color: #00953B;
+}
+
+#cancle-btn {
+    background-color: #D74343;
+    border: #D74343 solid 1px;
+}
+
+#cancle-btn:hover {
+    background-color: white;
+    color: #D74343;
+}
+
+.video-player {
+    visibility: hidden;
+    position: fixed;
+    top: 60px;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 20px;
+}
+
+.video-player iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+}

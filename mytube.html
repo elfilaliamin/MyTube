@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Oswald&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+    <link rel="icon" type="image/png" href="favicon.png">
 </head>
 <body>
     <header>
@@ -14,6 +16,9 @@
             <span class="material-icons" onclick="reloadPage()">polymer</span>
             <p onclick="reloadPage()">MYTUBE</p>
         </a>
+        <button id="save-archive-btn" onclick="showSaved()">
+            <span class="material-icons">bookmark</span>
+        </button>
     </header>
 
     <div id="content">
@@ -36,7 +41,7 @@
     </div>
 
     <div class="video-player" id="video-player">
-        <iframe id="current-video" width="560" height="315" src="https://www.youtube.com/embed/t2aRReBIM9U" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe id="current-video" width="560" height="315" src="https://www.youtube.com/embed/YOUR-VIDEO-ID" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
     </div>
     
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>

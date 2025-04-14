@@ -8,41 +8,72 @@ function hideaddvideo() {
   document.getElementById("addvideo-popup").style.visibility = 'hidden';
 }
 
+// Function to extract video ID and normalize to standard URL
+function extractVideoId(url) {
+  try {
+    let videoId = '';
+
+    if (url.includes('youtube.com')) {
+      const urlObj = new URL(url);
+      videoId = urlObj.searchParams.get('v');
+    } else if (url.includes('youtu.be')) {
+      const urlObj = new URL(url);
+      videoId = urlObj.pathname.split('/')[1];
+    }
+
+    if (videoId) {
+      videoId = videoId.split('&')[0];
+    }
+
+    return videoId;
+  } catch (error) {
+    console.error('Invalid YouTube URL:', url);
+    return null;
+  }
+}
+
 // Function to send the YouTube video URL to the backend and add it to data.csv
 async function addVideo() {
-  var videoUrl = document.getElementById("video-url").value;
+  document.getElementById("overlay").style.visibility = 'hidden';
+  document.getElementById("addvideo-popup").style.visibility = 'hidden';
+  var inputUrl = document.getElementById("video-url").value;
+  document.getElementById("video-url").value = "";
+  const videoId = extractVideoId(inputUrl);
 
-  // Check if the video URL is already in the video list
+  if (!videoId) {
+    alert("Invalid YouTube URL!");
+    return;
+  }
+
+  const videoUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
   const videoExists = videoList.some(video => video.video === videoUrl);
   if (videoExists) {
-      alert('This video is already added!');
-      return;
+    alert('This video is already added!');
+    return;
   }
 
   try {
-      // Prepare the data to be sent in the POST request
-      const data = { videoUrl: videoUrl };
+    const data = { videoUrl: videoUrl };
 
-      // Make the POST request to the server
-      const response = await fetch('http://localhost:3000/proxy', {
-          method: 'POST',
-          headers: {
-              'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data),
-      });
+    const response = await fetch('http://localhost:3000/proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
 
-      // Check if the response was successful
-      if (response.ok) {
-          const result = await response.json();
-          console.log(result.message); // Success message
-          updatelist();  // Update the video list after adding a new one
-      } else {
-          const error = await response.json();
-          console.error('Error adding video:', error.message);
-      }
+    if (response.ok) {
+      const result = await response.json();
+      console.log(result.message);
+      updatelist(false); // No shuffle
+    } else {
+      const error = await response.json();
+      console.error('Error adding video:', error.message);
+    }
   } catch (error) {
-      console.error('Error adding video:', error);
+    console.error('Error adding video:', error);
   }
 }
 
@@ -52,56 +83,75 @@ let videoList = [];
 // Function to fetch CSV data from the server and store it in the variable
 function fetchCSVData() {
   return fetch('http://localhost:3000/get-csv-data')
-      .then(response => response.json())  // Parse the JSON response
-      .then(data => {
-          videoList = data;  // Store the fetched data in the variable
-          console.log('Video List:', videoList);  // Display the list in the console
-      })
-      .catch(error => {
-          console.error('Error fetching CSV data:', error);
-      });
+    .then(response => response.json())
+    .then(data => {
+      videoList = data;
+      console.log('Video List:', videoList);
+    })
+    .catch(error => {
+      console.error('Error fetching CSV data:', error);
+    });
 }
 
-// Create Videos List with Correct Aspect Ratio for Thumbnails
-function updatelist() {
+// Shuffle an array function
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+// Create Videos List with Correct Aspect Ratio for Thumbnails and Random Order
+function updatelist(shouldShuffle = false) {
   fetchCSVData().then(() => {
-      let content = "";
+    let content = "";
 
-      // Filter to include videos where deletedate is empty
-      const filteredVideoList = videoList.filter(video => video.deletedate === "");
+    const filteredVideoList = videoList.filter(video => video.deletedate === "");
 
-      // Iterate over the filtered list
-      for (let i = 0; i < filteredVideoList.length; i++) {
-          let video = `
-          <div class="video">
-              <img src="${filteredVideoList[i].thumnails}" alt="Video Thumbnail" class="video-thumbnail">
-              <p>${filteredVideoList[i].title} </p>
-              <div class="buttons">
-                  <button id="watch-btn" onclick="watch('${filteredVideoList[i].id}')">Watch</button>
-                  <button id="delete-btn" onclick="deleteVideo('${filteredVideoList[i].id}')">Remove</button>
-              </div>
-          </div>`;
-          content = content + video;
-      }
+    if (shouldShuffle) {
+      shuffleArray(filteredVideoList);
+    }
 
-      document.getElementById("content").innerHTML = content;
+    for (let i = 0; i < filteredVideoList.length; i++) {
+      let originalTitle = filteredVideoList[i].title;
+      let shortTitle = originalTitle.length > 65 ? originalTitle.slice(0, 47) + '...' : originalTitle;
 
-      // Add event listeners for the buttons
-      document.querySelectorAll('#delete-btn').forEach(button => {
-          button.addEventListener('click', function() {
-              const videoId = button.getAttribute('data-id');
-              deleteVideo(videoId);
-          });
+      let video = `
+      <div class="video">
+        <img src="${filteredVideoList[i].thumnails}" alt="Video Thumbnail" class="video-thumbnail">
+        <p title="${originalTitle}">${shortTitle}</p>
+        <div class="buttons">
+          <button id="watch-btn" onclick="watch('${filteredVideoList[i].id}')">
+            <span class="material-icons">slideshow</span>
+          </button>
+          <button id="save-btn" type="button" onclick="save('${filteredVideoList[i].id}')">
+            <span class="material-icons">bookmark</span>
+          </button>
+          <button id="delete-btn" onclick="deleteVideo('${filteredVideoList[i].id}')">
+            <span class="material-icons">delete</span>
+          </button>
+        </div>
+      </div>`;
+      content += video;
+    }
+
+    document.getElementById("content").innerHTML = content;
+
+    document.querySelectorAll('#delete-btn').forEach(button => {
+      button.addEventListener('click', function () {
+        const videoId = button.getAttribute('data-id');
+        deleteVideo(videoId);
       });
+    });
   }).catch(error => {
-      console.error('Error updating the video list:', error);
+    console.error('Error updating the video list:', error);
   });
 }
 
 // Call the function to display the video list
-updatelist();
+updatelist(true);
 
-
+// Delete video function
 async function deleteVideo(videoId) {
   try {
     const response = await fetch('http://localhost:3000/delete-video', {
@@ -113,7 +163,7 @@ async function deleteVideo(videoId) {
     if (response.ok) {
       const result = await response.json();
       console.log(result.message);
-      updatelist(); // Refresh list after deletion
+      updatelist(false); // No shuffle
     } else {
       const error = await response.json();
       console.error('Error deleting video:', error.message);
@@ -123,7 +173,9 @@ async function deleteVideo(videoId) {
   }
 }
 
+// Watch video function
 function watch(videoId) {
+  document.getElementById("content").style.visibility = 'hidden';
   document.getElementById("video-player").style.visibility = 'visible';
   const videoElement = document.getElementById("current-video");
   if (videoElement) {
@@ -131,4 +183,73 @@ function watch(videoId) {
   } else {
     console.error('Element with id="current-video" not found.');
   }
+}
+
+// Save video function
+async function save(videoId) {
+  try {
+    const response = await fetch('http://localhost:3000/save-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId })
+    });
+
+    const result = await response.json();
+    console.log(result.message);
+    updatelist(false); // No shuffle
+  } catch (error) {
+    console.error('Error saving video:', error);
+  }
+}
+
+// Remove saved video function
+async function removeSaved(videoId) {
+  try {
+    const response = await fetch('http://localhost:3000/remove-saved-video', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ videoId })
+    });
+
+    const result = await response.json();
+    console.log(result.message);
+    updatelist(false); // No shuffle
+  } catch (error) {
+    console.error('Error removing saved status:', error);
+  }
+}
+
+// Show saved videos function
+function showSaved() {
+  fetchCSVData().then(() => {
+    let content = "";
+
+    // Filter videos that are saved and deleted
+    const savedAndDeletedVideos = videoList.filter(
+      video => video.saved === 'saved'
+    );
+
+    for (let i = 0; i < savedAndDeletedVideos.length; i++) {
+      let originalTitle = savedAndDeletedVideos[i].title;
+      let shortTitle = originalTitle.length > 65 ? originalTitle.slice(0, 47) + '...' : originalTitle;
+
+      let video = `
+      <div class="video">
+        <img src="${savedAndDeletedVideos[i].thumnails}" alt="Video Thumbnail" class="video-thumbnail">
+        <p title="${originalTitle}">${shortTitle}</p>
+        <p class="deleted-note">[Deleted from server]</p>
+        <div class="buttons">
+          <button id="watch-btn" onclick="watch('${savedAndDeletedVideos[i].id}')">
+            <span class="material-icons">slideshow</span>
+          </button>
+          <button id="remove-saved-btn" onclick="removeSaved('${savedAndDeletedVideos[i].id}')">
+            <span class="material-icons">bookmark_remove</span>
+          </button>
+        </div>
+      </div>`;
+      content += video;
+    }
+
+    document.getElementById("content").innerHTML = content;
+  });
 }

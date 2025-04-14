@@ -12,6 +12,14 @@ app.use(cors());
 // Middleware to parse incoming JSON requests
 app.use(express.json());
 
+// Define the path to the CSV file
+const filePath = path.join(__dirname, 'data.csv');
+
+// Check if the file exists, if not create it
+if (!fs.existsSync(filePath)) {
+  fs.writeFileSync(filePath, '"id","title","video","thumbnail","deletedate","saved"\n'); // Add CSV header
+}
+
 // Define the route to handle the POST request for adding video data
 app.post('/proxy', async (req, res) => {
   const { videoUrl } = req.body;
@@ -28,13 +36,10 @@ app.post('/proxy', async (req, res) => {
     const videoId = videoUrl.split('v=')[1];
 
     // Construct the video thumbnail URL
-    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;  // Corrected URL format
+    const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
     // Prepare data to be written to CSV
     const csvData = `"${videoId}","${title}","${videoUrl}","${thumbnailUrl}",""\n`;
-
-    // Define the path to the data.csv file
-    const filePath = path.join(__dirname, 'data.csv');
 
     // Append the data to the CSV file
     fs.appendFileSync(filePath, csvData);
@@ -50,83 +55,36 @@ app.post('/proxy', async (req, res) => {
 
 // Define the route to fetch the CSV data
 app.get('/get-csv-data', (req, res) => {
-  const filePath = path.join(__dirname, 'data.csv');
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ message: 'CSV file not found' });
+  }
+
+  const csvData = fs.readFileSync(filePath, 'utf-8');
   
-  // Check if the CSV file exists
-  if (fs.existsSync(filePath)) {
-    const csvData = fs.readFileSync(filePath, 'utf-8');
-    
-    // Split the CSV data into rows and columns, and convert it to JSON format
-    const rows = csvData.split('\n');
-    const result = rows.map(row => {
-      // Ignore empty rows and handle potential issues with missing columns
-      if (row.trim() === '') return null;
+  // Split the CSV data into rows and columns, and convert it to JSON format
+  const rows = csvData.split('\n');
+  const result = rows.map(row => {
+    if (row.trim() === '') return null;
 
-      const columns = row.split(',');
+    const columns = row.split(',');
 
-      // Ensure we have the correct number of columns, if not return null
-      if (columns.length < 5) return null;
+    if (columns.length < 5) return null;
 
-      return {
-        id: columns[0].replace(/"/g, ''),
-        title: columns[1].replace(/"/g, ''),
-        video: columns[2].replace(/"/g, ''),
-        thumnails: columns[3].replace(/"/g, ''),
-        deletedate: columns[4].replace(/"/g, ''),
-      };
-    }).filter(row => row !== null);  // Filter out any null values
+    return {
+      id: columns[0].replace(/"/g, ''),
+      title: columns[1].replace(/"/g, ''),
+      video: columns[2].replace(/"/g, ''),
+      thumnails: columns[3].replace(/"/g, ''),
+      deletedate: columns[4].replace(/"/g, ''),
+      saved: (columns[5] || '').replace(/"/g, '')
+    };
+  }).filter(row => row !== null);
 
-    // Remove the header row (if present)
-    result.shift();
+  // Remove the header row (if present)
+  result.shift();
 
-    // Send the CSV data as JSON
-    res.json(result);
-  } else {
-    res.status(404).json({ message: 'CSV file not found' });
-  }
-});
-
-// Define the route to handle the POST request for deleting a video
-app.post('/delete-video', (req, res) => {
-  const { videoId } = req.body;
-
-  const filePath = path.join(__dirname, 'data.csv');
-
-  if (fs.existsSync(filePath)) {
-    const csvData = fs.readFileSync(filePath, 'utf-8');
-    
-    const rows = csvData.split('\n');
-    let updatedCsv = '';
-
-    let videoFound = false;
-    const currentDate = new Date().toLocaleString();  // Get current date and time
-
-    rows.forEach(row => {
-      if (row.trim() === '') return;
-      
-      const columns = row.split(',');
-
-      // If the video ID matches, update the deletedate column
-      if (columns[0].replace(/"/g, '') === videoId) {
-        columns[4] = `"${currentDate}"`;  // Update deletedate with the current date
-        videoFound = true;
-      }
-
-      updatedCsv += columns.join(',') + '\n';
-    });
-
-    if (!videoFound) {
-      return res.status(404).json({ message: 'Video not found' });
-    }
-
-    // Write the updated data back to the CSV file
-    fs.writeFileSync(filePath, updatedCsv.trim());
-
-    // Respond with a success message
-    res.json({ message: 'Video marked as deleted' });
-  } else {
-    res.status(404).json({ message: 'CSV file not found' });
-  }
+  // Send the CSV data as JSON
+  res.json(result);
 });
 
 // Define the route to handle the POST request for deleting a video
@@ -137,8 +95,6 @@ app.post('/delete-video', (req, res) => {
     return res.status(400).json({ message: 'Missing videoId in request' });
   }
 
-  const filePath = path.join(__dirname, 'data.csv');
-
   if (!fs.existsSync(filePath)) {
     return res.status(404).json({ message: 'CSV file not found' });
   }
@@ -148,7 +104,9 @@ app.post('/delete-video', (req, res) => {
 
   let updatedCsv = '';
   let videoFound = false;
-  const currentDate = new Date().toLocaleString();
+
+  // Safe date format: "YYYY-MM-DD HH:mm:ss"
+  const currentDate = new Date().toISOString().replace('T', ' ').split('.')[0];
 
   rows.forEach(row => {
     if (row.trim() === '') return;
@@ -179,6 +137,65 @@ app.post('/delete-video', (req, res) => {
   res.json({ message: 'Video marked as deleted' });
 });
 
+// Define the route to handle the POST request for saving a video
+app.post('/save-video', (req, res) => {
+  const { videoId } = req.body;
+
+  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'CSV file not found' });
+
+  const csvData = fs.readFileSync(filePath, 'utf-8');
+  const rows = csvData.split('\n');
+  let updatedCsv = '';
+  let videoFound = false;
+
+  rows.forEach(row => {
+    if (row.trim() === '') return;
+    let columns = row.split(',');
+    if (columns.length < 6) columns.push('""'); // Add "saved" column if missing
+
+    if (columns[0].replace(/"/g, '') === videoId) {
+      columns[5] = `"saved"`; // Set saved status
+      videoFound = true;
+    }
+
+    updatedCsv += columns.join(',') + '\n';
+  });
+
+  if (!videoFound) return res.status(404).json({ message: 'Video not found' });
+
+  fs.writeFileSync(filePath, updatedCsv.trim());
+  res.json({ message: 'Video marked as saved' });
+});
+
+// Define the route to handle the POST request for removing the saved status of a video
+app.post('/remove-saved-video', (req, res) => {
+  const { videoId } = req.body;
+
+  if (!fs.existsSync(filePath)) return res.status(404).json({ message: 'CSV file not found' });
+
+  const csvData = fs.readFileSync(filePath, 'utf-8');
+  const rows = csvData.split('\n');
+  let updatedCsv = '';
+  let videoFound = false;
+
+  rows.forEach(row => {
+    if (row.trim() === '') return;
+    let columns = row.split(',');
+    if (columns.length < 6) columns.push('""');
+
+    if (columns[0].replace(/"/g, '') === videoId) {
+      columns[5] = `""`; // Clear saved status
+      videoFound = true;
+    }
+
+    updatedCsv += columns.join(',') + '\n';
+  });
+
+  if (!videoFound) return res.status(404).json({ message: 'Video not found' });
+
+  fs.writeFileSync(filePath, updatedCsv.trim());
+  res.json({ message: 'Saved status removed' });
+});
 
 // Start the server and listen on port 3000
 app.listen(3000, () => {

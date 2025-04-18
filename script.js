@@ -175,6 +175,7 @@ async function deleteVideo(videoId) {
 
 // Watch video function
 function watch(videoId) {
+  document.getElementById("return-btn").style.visibility = 'visible';
   document.getElementById("content").style.visibility = 'hidden';
   document.getElementById("video-player").style.visibility = 'visible';
   const videoElement = document.getElementById("current-video");
@@ -222,6 +223,10 @@ async function removeSaved(videoId) {
 // Show saved videos function
 function showSaved() {
   fetchCSVData().then(() => {
+    document.getElementById("return-btn").style.visibility = 'hidden';
+    document.getElementById("content").style.visibility = 'visible';
+    document.getElementById("video-player").style.visibility = 'hidden';
+    
     let content = "";
 
     // Filter videos that are saved and deleted
@@ -252,4 +257,10 @@ function showSaved() {
 
     document.getElementById("content").innerHTML = content;
   });
+}
+
+function VideoReturn(){
+  document.getElementById("return-btn").style.visibility = 'hidden';
+  document.getElementById("content").style.visibility = 'visible';
+  document.getElementById("video-player").style.visibility = 'hidden';
 }
